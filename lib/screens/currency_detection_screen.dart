@@ -141,7 +141,7 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
                     width: double.infinity,
                     height: double.infinity,
                   ),
-                  if (_controller.isLoading)
+                  if (_controller.isAnalyzing)
                     Container(
                       color: Colors.black54,
                       child: const Center(
@@ -181,62 +181,113 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
   }
 
   Widget _buildActionButtons() {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _controller.isLoading
-                ? null
-                : () async {
-                    try {
-                      await _controller.pickImageFromCamera();
-                    } catch (e) {
-                      if (mounted) {
-                        ErrorHandler.showError(context, e.toString());
-                      }
-                    }
-                  },
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Camera'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              elevation: 2,
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: (_controller.isLoading || _controller.isAnalyzing)
+                    ? null
+                    : () async {
+                        try {
+                          await _controller.pickImageFromCamera();
+                        } catch (e) {
+                          if (mounted) {
+                            ErrorHandler.showError(context, e.toString());
+                          }
+                        }
+                      },
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Camera'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 2,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: (_controller.isLoading || _controller.isAnalyzing)
+                    ? null
+                    : () async {
+                        try {
+                          await _controller.pickImageFromGallery();
+                        } catch (e) {
+                          if (mounted) {
+                            ErrorHandler.showError(context, e.toString());
+                          }
+                        }
+                      },
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Gallery'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 2,
+                ),
+              ),
+            ),
+            if (_controller.selectedImage != null) ...[
+              const SizedBox(width: 16),
+              ElevatedButton(
+                onPressed: (_controller.isLoading || _controller.isAnalyzing)
+                    ? null
+                    : _controller.clearImage,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade400,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 12,
+                  ),
+                  elevation: 2,
+                ),
+                child: const Icon(Icons.clear),
+              ),
+            ],
+          ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _controller.isLoading
-                ? null
-                : () async {
-                    try {
-                      await _controller.pickImageFromGallery();
-                    } catch (e) {
-                      if (mounted) {
-                        ErrorHandler.showError(context, e.toString());
+        if (_controller.hasImageSelected && _controller.prediction == null) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _controller.isAnalyzing
+                  ? null
+                  : () async {
+                      try {
+                        await _controller.checkCurrency();
+                      } catch (e) {
+                        if (mounted) {
+                          ErrorHandler.showError(context, e.toString());
+                        }
                       }
-                    }
-                  },
-            icon: const Icon(Icons.photo_library),
-            label: const Text('Gallery'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              elevation: 2,
+                    },
+              icon: _controller.isAnalyzing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.search),
+              label: Text(
+                _controller.isAnalyzing ? 'Analyzing...' : 'Check Currency',
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                elevation: 4,
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          ),
-        ),
-        if (_controller.selectedImage != null) ...[
-          const SizedBox(width: 16),
-          ElevatedButton(
-            onPressed: _controller.isLoading ? null : _controller.clearImage,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade400,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-              elevation: 2,
-            ),
-            child: const Icon(Icons.clear),
           ),
         ],
       ],
@@ -244,7 +295,7 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
   }
 
   Widget _buildResultSection() {
-    if (_controller.isLoading && _controller.selectedImage != null) {
+    if (_controller.isAnalyzing) {
       return const Card(
         elevation: 4,
         child: Padding(
@@ -354,6 +405,22 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
                   fontStyle: FontStyle.italic,
                 ),
                 textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  _controller.clearImage();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Check Another'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
               ),
             ],
           ),

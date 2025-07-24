@@ -12,6 +12,8 @@ class CurrencyDetectionService {
   bool _isModelLoaded = false;
 
   Future<void> loadModel() async {
+    if (_isModelLoaded && _interpreter != null) return;
+
     try {
       _interpreter = await Interpreter.fromAsset(_modelPath);
       _isModelLoaded = true;
@@ -26,7 +28,6 @@ class CurrencyDetectionService {
     }
 
     try {
-      // Read and decode image
       final imageBytes = await imageFile.readAsBytes();
       img.Image? image = img.decodeImage(imageBytes);
 
@@ -34,16 +35,11 @@ class CurrencyDetectionService {
         throw Exception('Failed to decode image');
       }
 
-      // Preprocess image to proper tensor format
       final inputTensor = _preprocessImage(image);
+      final outputTensor = List.generate(1, (_) => List<double>.filled(2, 0.0));
 
-      // Prepare output tensor - create proper 2D list structure
-      var outputTensor = [List<double>.filled(2, 0.0)];
+      _interpreter!.run(inputTensor, outputTensor);
 
-      // Run inference with properly shaped tensors
-      _interpreter!.run([inputTensor], outputTensor);
-
-      // Extract results from the output
       final results = outputTensor[0];
       final fakeConfidence = results[0];
       final realConfidence = results[1];
@@ -61,7 +57,6 @@ class CurrencyDetectionService {
   }
 
   List<List<List<List<double>>>> _preprocessImage(img.Image image) {
-    // Resize image to model input size
     final resized = img.copyResize(
       image,
       width: _inputSize,
@@ -69,7 +64,6 @@ class CurrencyDetectionService {
       interpolation: img.Interpolation.linear,
     );
 
-    // Convert to 4D tensor [batch=1, height, width, channels=3]
     return [
       List.generate(
         _inputSize,
@@ -81,65 +75,6 @@ class CurrencyDetectionService {
     ];
   }
 
-  // Alternative preprocessing if model expects different input format
-  List<List<List<List<double>>>> _preprocessImageAs4D(img.Image image) {
-    final resized = img.copyResize(
-      image,
-      width: _inputSize,
-      height: _inputSize,
-      interpolation: img.Interpolation.linear,
-    );
-
-    // Create 4D tensor [batch=1, height, width, channels=3]
-    return [
-      List.generate(
-        _inputSize,
-        (y) => List.generate(_inputSize, (x) {
-          final pixel = resized.getPixel(x, y);
-          return [pixel.r / 255.0, pixel.g / 255.0, pixel.b / 255.0];
-        }),
-      ),
-    ];
-  }
-
-  // Method for models that expect different output format
-  Future<CurrencyPrediction> predictCurrencyWith4DOutput(File imageFile) async {
-    if (!_isModelLoaded || _interpreter == null) {
-      await loadModel();
-    }
-
-    try {
-      final imageBytes = await imageFile.readAsBytes();
-      img.Image? image = img.decodeImage(imageBytes);
-
-      if (image == null) {
-        throw Exception('Failed to decode image');
-      }
-
-      final inputTensor = _preprocessImageAs4D(image);
-
-      // Output as 2D array [batch=1, classes=2]
-      final outputTensor = List.generate(1, (_) => List<double>.filled(2, 0.0));
-
-      _interpreter!.run(inputTensor, outputTensor);
-
-      final results = outputTensor[0];
-      final fakeConfidence = results[0];
-      final realConfidence = results[1];
-
-      final isReal = realConfidence > fakeConfidence;
-      final maxConfidence = isReal ? realConfidence : fakeConfidence;
-
-      return CurrencyPrediction(
-        isReal: isReal,
-        confidence: maxConfidence.clamp(0.0, 1.0),
-      );
-    } catch (e) {
-      throw Exception('4D Prediction failed: $e');
-    }
-  }
-
-  // Get model input/output details for debugging
   List<String> getModelInfo() {
     if (_interpreter == null) return ['Model not loaded'];
 
@@ -162,7 +97,7 @@ class CurrencyDetectionService {
     return info;
   }
 
-  Future<void> dispose() async {
+  void dispose() {
     try {
       _interpreter?.close();
       _interpreter = null;

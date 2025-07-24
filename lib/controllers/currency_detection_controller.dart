@@ -11,12 +11,15 @@ class CurrencyDetectionController extends ChangeNotifier {
   File? _selectedImage;
   CurrencyPrediction? _prediction;
   bool _isLoading = false;
+  bool _isAnalyzing = false;
   String? _error;
 
   File? get selectedImage => _selectedImage;
   CurrencyPrediction? get prediction => _prediction;
   bool get isLoading => _isLoading;
+  bool get isAnalyzing => _isAnalyzing;
   String? get error => _error;
+  bool get hasImageSelected => _selectedImage != null;
 
   Future<void> initializeModel() async {
     try {
@@ -32,46 +35,47 @@ class CurrencyDetectionController extends ChangeNotifier {
 
   Future<void> pickImageFromCamera() async {
     try {
-      _setLoading(true);
       _clearError();
+      _clearPrediction();
 
       final image = await _imagePickerService.pickFromCamera();
       if (image != null) {
         _selectedImage = image;
-        await _predictCurrency();
+        notifyListeners();
       }
     } catch (e) {
       _setError('Failed to pick image from camera: $e');
-    } finally {
-      _setLoading(false);
     }
   }
 
   Future<void> pickImageFromGallery() async {
     try {
-      _setLoading(true);
       _clearError();
+      _clearPrediction();
 
       final image = await _imagePickerService.pickFromGallery();
       if (image != null) {
         _selectedImage = image;
-        await _predictCurrency();
+        notifyListeners();
       }
     } catch (e) {
       _setError('Failed to pick image from gallery: $e');
-    } finally {
-      _setLoading(false);
     }
   }
 
-  Future<void> _predictCurrency() async {
+  Future<void> checkCurrency() async {
     if (_selectedImage == null) return;
 
     try {
+      _setAnalyzing(true);
+      _clearError();
+
       _prediction = await _detectionService.predictCurrency(_selectedImage!);
       notifyListeners();
     } catch (e) {
       _setError('Failed to analyze currency: $e');
+    } finally {
+      _setAnalyzing(false);
     }
   }
 
@@ -82,8 +86,17 @@ class CurrencyDetectionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _clearPrediction() {
+    _prediction = null;
+  }
+
   void _setLoading(bool loading) {
     _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setAnalyzing(bool analyzing) {
+    _isAnalyzing = analyzing;
     notifyListeners();
   }
 
