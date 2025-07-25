@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../controllers/currency_detection_controller.dart';
 import '../utils/error_handler.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/report_button.dart';
 
 class CurrencyDetectionScreen extends StatefulWidget {
   const CurrencyDetectionScreen({super.key});
@@ -112,7 +113,7 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
-                'Capture or select a clear image of the currency note to detect if it\'s real or fake.',
+                'Capture or select a clear image of the currency note to detect if it\'s real or fake. If fake currency is detected, you can report it to cyber crime authorities.',
                 style: TextStyle(fontSize: 14),
               ),
             ),
@@ -319,9 +320,86 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
     }
 
     final prediction = _controller.prediction!;
-    final confidencePercentage = (prediction.confidence * 100).toStringAsFixed(
-      1,
-    );
+
+    // Handle no currency detected case
+    if (!prediction.hasCurrency) {
+      return Card(
+        elevation: 6,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.orange.shade50, Colors.orange.shade100],
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 500),
+                  child: Icon(
+                    Icons.search_off,
+                    size: 80,
+                    color: Colors.orange.shade600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'NO CURRENCY DETECTED',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade700,
+                    letterSpacing: 1.2,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  prediction.message ?? 'No currency note found in the image',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.orange.shade600,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Please ensure:\n• The image contains a currency note\n• The note is clearly visible\n• Good lighting conditions',
+                  style: TextStyle(fontSize: 14, color: Colors.orange.shade600),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _controller.clearImage();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Try Another Image'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange.shade600,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Handle normal currency detection case
+    // final confidencePercentage = (prediction.confidence * 100).toStringAsFixed(
+    // 1,
+    // );
 
     return Card(
       elevation: 6,
@@ -383,14 +461,6 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
                     ),
                   ],
                 ),
-                child: Text(
-                  'Confidence: $confidencePercentage%',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
               ),
               const SizedBox(height: 16),
               Text(
@@ -407,6 +477,18 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
+
+              // Show report button only for fake currency
+              if (!prediction.isReal && _controller.selectedImage != null) ...[
+                ReportButton(
+                  imageFile: _controller.selectedImage!,
+                  onReported: () {
+                    // Optional: Add any callback logic here
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+
               ElevatedButton.icon(
                 onPressed: () {
                   _controller.clearImage();

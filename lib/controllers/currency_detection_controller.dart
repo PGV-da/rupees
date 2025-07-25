@@ -74,6 +74,16 @@ class CurrencyDetectionController extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _setError('Failed to analyze currency: $e');
+
+      // Debug: Log model info when there's an error
+      try {
+        final modelInfo = _detectionService.getModelInfo();
+        for (final info in modelInfo) {
+          print('Model Info: $info');
+        }
+      } catch (debugError) {
+        print('Failed to get model info: $debugError');
+      }
     } finally {
       _setAnalyzing(false);
     }
