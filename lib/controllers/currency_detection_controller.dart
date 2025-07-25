@@ -33,21 +33,6 @@ class CurrencyDetectionController extends ChangeNotifier {
     }
   }
 
-  Future<void> pickImageFromCamera() async {
-    try {
-      _clearError();
-      _clearPrediction();
-
-      final image = await _imagePickerService.pickFromCamera();
-      if (image != null) {
-        _selectedImage = image;
-        notifyListeners();
-      }
-    } catch (e) {
-      _setError('Failed to pick image from camera: $e');
-    }
-  }
-
   Future<void> pickImageFromGallery() async {
     try {
       _clearError();
