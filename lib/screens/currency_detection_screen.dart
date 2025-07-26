@@ -191,68 +191,73 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
             setState(() {}); // Refresh the UI
           },
         ),
-        // Gallery selection button
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: (_controller.isLoading || _controller.isAnalyzing)
-                ? null
-                : () async {
-                    try {
-                      // Check permission first
-                      final hasPermission =
-                          await PermissionDialog.handleStoragePermission(
-                            context,
-                          );
-                      if (hasPermission) {
-                        await _controller.pickImageFromGallery();
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ErrorHandler.showError(context, e.toString());
-                      }
-                    }
-                  },
-            icon: const Icon(Icons.photo_library),
-            label: const Text('Select from Gallery'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              elevation: 2,
+        // Gallery and Camera buttons side by side
+        Row(
+          children: [
+            // Gallery selection button
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: (_controller.isLoading || _controller.isAnalyzing)
+                    ? null
+                    : () async {
+                        try {
+                          // Check permission first
+                          final hasPermission =
+                              await PermissionDialog.handleStoragePermission(
+                                context,
+                              );
+                          if (hasPermission) {
+                            await _controller.pickImageFromGallery();
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ErrorHandler.showError(context, e.toString());
+                          }
+                        }
+                      },
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Select from Gallery'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 2,
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Camera button
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: (_controller.isLoading || _controller.isAnalyzing)
-                ? null
-                : () async {
-                    try {
-                      // Check camera permission first
-                      final hasPermission =
-                          await PermissionDialog.handleCameraPermission(
-                            context,
-                          );
-                      if (hasPermission) {
-                        await _controller.pickImageFromCamera();
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ErrorHandler.showError(context, e.toString());
-                      }
-                    }
-                  },
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Take Photo'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.secondary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              elevation: 2,
+            const SizedBox(width: 12),
+            // Camera button
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: (_controller.isLoading || _controller.isAnalyzing)
+                    ? null
+                    : () async {
+                        try {
+                          // Check camera permission first
+                          final hasPermission =
+                              await PermissionDialog.handleCameraPermission(
+                                context,
+                              );
+                          if (hasPermission) {
+                            await _controller.pickImageFromCamera();
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ErrorHandler.showError(context, e.toString());
+                          }
+                        }
+                      },
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Take Photo'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 2,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
         if (_controller.selectedImage != null) ...[
           const SizedBox(height: 16),
