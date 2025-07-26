@@ -3,6 +3,7 @@ import '../controllers/currency_detection_controller.dart';
 import '../utils/error_handler.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/report_button.dart';
+import '../widgets/permission_dialog.dart';
 
 class CurrencyDetectionScreen extends StatefulWidget {
   const CurrencyDetectionScreen({super.key});
@@ -113,7 +114,7 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
-                'Capture or select a clear image of the currency note to detect if it\'s real or fake. If fake currency is detected, you can report it to cyber crime authorities.',
+                'Select a clear image of the currency note from your gallery to detect if it\'s real or fake. If fake currency is detected, you can report it to cyber crime authorities.',
                 style: TextStyle(fontSize: 14),
               ),
             ),
@@ -172,7 +173,7 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Camera or Gallery',
+                    'Gallery Access Required',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
@@ -184,71 +185,61 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
   Widget _buildActionButtons() {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: (_controller.isLoading || _controller.isAnalyzing)
-                    ? null
-                    : () async {
-                        try {
-                          await _controller.pickImageFromCamera();
-                        } catch (e) {
-                          if (mounted) {
-                            ErrorHandler.showError(context, e.toString());
-                          }
-                        }
-                      },
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Camera'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 2,
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: (_controller.isLoading || _controller.isAnalyzing)
-                    ? null
-                    : () async {
-                        try {
-                          await _controller.pickImageFromGallery();
-                        } catch (e) {
-                          if (mounted) {
-                            ErrorHandler.showError(context, e.toString());
-                          }
-                        }
-                      },
-                icon: const Icon(Icons.photo_library),
-                label: const Text('Gallery'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 2,
-                ),
-              ),
-            ),
-            if (_controller.selectedImage != null) ...[
-              const SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: (_controller.isLoading || _controller.isAnalyzing)
-                    ? null
-                    : _controller.clearImage,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade400,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 12,
-                  ),
-                  elevation: 2,
-                ),
-                child: const Icon(Icons.clear),
-              ),
-            ],
-          ],
+        // Permission status widget
+        PermissionStatusWidget(
+          onPermissionGranted: () {
+            setState(() {}); // Refresh the UI
+          },
         ),
+        // Gallery selection button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: (_controller.isLoading || _controller.isAnalyzing)
+                ? null
+                : () async {
+                    try {
+                      // Check permission first
+                      final hasPermission =
+                          await PermissionDialog.handleStoragePermission(
+                            context,
+                          );
+                      if (hasPermission) {
+                        await _controller.pickImageFromGallery();
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ErrorHandler.showError(context, e.toString());
+                      }
+                    }
+                  },
+            icon: const Icon(Icons.photo_library),
+            label: const Text('Select from Gallery'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              elevation: 2,
+            ),
+          ),
+        ),
+        if (_controller.selectedImage != null) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: (_controller.isLoading || _controller.isAnalyzing)
+                  ? null
+                  : _controller.clearImage,
+              icon: const Icon(Icons.clear),
+              label: const Text('Clear Image'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade400,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 2,
+              ),
+            ),
+          ),
+        ],
         if (_controller.hasImageSelected && _controller.prediction == null) ...[
           const SizedBox(height: 16),
           SizedBox(

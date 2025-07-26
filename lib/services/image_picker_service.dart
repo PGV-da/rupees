@@ -1,73 +1,61 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
+import '../services/permission_service.dart';
 import '../utils/constants.dart';
 
 class ImagePickerService {
   final ImagePicker _picker = ImagePicker();
+  final PermissionService _permissionService = PermissionService();
 
-  Future<File?> pickFromCamera() async {
-    try {
-      if (await _requestCameraPermission()) {
-        final XFile? image = await _picker.pickImage(
-          source: ImageSource.camera,
-          imageQuality: AppConstants.imageQuality,
-          maxWidth: 1024,
-          maxHeight: 1024,
-        );
-        return image != null ? File(image.path) : null;
-      } else {
-        throw Exception(AppConstants.permissionDeniedError);
-      }
-    } catch (e) {
-      throw Exception('Camera error: $e');
-    }
-  }
-
+  /// Picks an image from gallery with proper permission handling
   Future<File?> pickFromGallery() async {
     try {
-      if (await _requestStoragePermission()) {
-        final XFile? image = await _picker.pickImage(
-          source: ImageSource.gallery,
-          imageQuality: AppConstants.imageQuality,
-          maxWidth: 1024,
-          maxHeight: 1024,
+      // Request storage permission first
+      final permissionResult = await _permissionService
+          .requestStoragePermission();
+
+      if (!permissionResult.isGranted) {
+        throw Exception(
+          permissionResult.message ?? AppConstants.storagePermissionDeniedError,
         );
-        return image != null ? File(image.path) : null;
-      } else {
-        throw Exception(AppConstants.permissionDeniedError);
       }
+
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: AppConstants.imageQuality,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+
+      return image != null ? File(image.path) : null;
+    } on PlatformException catch (e) {
+      if (e.code == 'photo_access_denied') {
+        throw Exception(AppConstants.storagePermissionDeniedError);
+      }
+      throw Exception('Gallery access error: ${e.message}');
     } catch (e) {
-      throw Exception('Gallery error: $e');
+      rethrow;
     }
   }
 
-  Future<bool> _requestCameraPermission() async {
-    final status = await Permission.camera.request();
-    return status == PermissionStatus.granted;
+  /// Check current storage permission status
+  Future<bool> hasStoragePermission() async {
+    return await _permissionService.isStoragePermissionGranted();
   }
 
-  Future<bool> _requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      // For Android 13+ (API 33+), we need different permissions
-      if (Platform.version.contains('13') || Platform.version.contains('14')) {
-        final status = await Permission.photos.request();
-        return status == PermissionStatus.granted;
-      } else {
-        final status = await Permission.storage.request();
-        return status == PermissionStatus.granted;
-      }
-    }
-    return true; // iOS handles this automatically
+  /// Get detailed permission result for UI handling
+  Future<PermissionResult> checkStoragePermission() async {
+    return await _permissionService.requestStoragePermission();
   }
 
-  Future<bool> checkPermissions() async {
-    final cameraStatus = await Permission.camera.status;
-    final storageStatus = Platform.isAndroid
-        ? await Permission.storage.status
-        : PermissionStatus.granted;
+  /// Open app settings for permission management
+  Future<bool> openAppSettings() async {
+    return await _permissionService.openAppSettings();
+  }
 
-    return cameraStatus == PermissionStatus.granted &&
-        storageStatus == PermissionStatus.granted;
+  /// Check if we should show permission rationale
+  Future<bool> shouldShowPermissionRationale() async {
+    return await _permissionService.shouldShowPermissionRationale();
   }
 }
