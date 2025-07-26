@@ -35,11 +35,25 @@ class AppConstants {
   static const String storagePermissionRationaleMessage =
       'This app needs gallery access to let you select currency images for detection. No images are stored or shared.';
 
+  // Camera permission messages
+  static const String cameraPermissionDeniedError =
+      'Camera access denied. Please allow camera access to take photos.';
+  static const String cameraPermissionPermanentlyDeniedError =
+      'Camera access permanently denied. Please enable it in Settings > Apps > Rupees > Permissions > Camera.';
+  static const String cameraPermissionRestrictedError =
+      'Camera access is restricted by device policies.';
+  static const String cameraPermissionRationaleMessage =
+      'This app needs camera access to let you take photos of currency for detection. No photos are stored or shared.';
+
   // Permission guidance messages
   static const String enablePermissionInSettings =
       'To enable gallery access:\n1. Go to Settings\n2. Find "Rupees" app\n3. Tap Permissions\n4. Enable "Photos and media" or "Storage"';
+  static const String enableCameraPermissionInSettings =
+      'To enable camera access:\n1. Go to Settings\n2. Find "Rupees" app\n3. Tap Permissions\n4. Enable "Camera"';
   static const String permissionRequiredTitle = 'Gallery Access Required';
+  static const String cameraPermissionRequiredTitle = 'Camera Access Required';
   static const String permissionDeniedTitle = 'Gallery Access Denied';
+  static const String cameraPermissionDeniedTitle = 'Camera Access Denied';
 
   // Success messages
   static const String modelLoadedSuccess = 'Model loaded successfully';

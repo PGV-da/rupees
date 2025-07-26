@@ -162,6 +162,98 @@ class PermissionService {
     }
   }
 
+  /// Check and request camera permission
+  Future<PermissionResult> requestCameraPermission() async {
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return PermissionResult.granted();
+    }
+
+    try {
+      final permission = permission_handler.Permission.camera;
+
+      // Check current status
+      permission_handler.PermissionStatus currentStatus =
+          await permission.status;
+
+      if (currentStatus == permission_handler.PermissionStatus.granted) {
+        return PermissionResult.granted();
+      }
+
+      if (currentStatus ==
+          permission_handler.PermissionStatus.permanentlyDenied) {
+        return PermissionResult.permanentlyDenied(
+          AppConstants.cameraPermissionPermanentlyDeniedError,
+        );
+      }
+
+      // Request permission
+      final result = await permission.request();
+
+      switch (result) {
+        case permission_handler.PermissionStatus.granted:
+          return PermissionResult.granted();
+        case permission_handler.PermissionStatus.denied:
+          return PermissionResult.denied(
+            AppConstants.cameraPermissionDeniedError,
+          );
+        case permission_handler.PermissionStatus.permanentlyDenied:
+          return PermissionResult.permanentlyDenied(
+            AppConstants.cameraPermissionPermanentlyDeniedError,
+          );
+        case permission_handler.PermissionStatus.restricted:
+          return PermissionResult.restricted(
+            AppConstants.cameraPermissionRestrictedError,
+          );
+        default:
+          return PermissionResult.denied(
+            AppConstants.cameraPermissionDeniedError,
+          );
+      }
+    } catch (e) {
+      return PermissionResult.error('Failed to request camera permission: $e');
+    }
+  }
+
+  /// Check if camera permission is granted
+  Future<bool> isCameraPermissionGranted() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return true;
+
+    try {
+      final permission = permission_handler.Permission.camera;
+      final status = await permission.status;
+      return status == permission_handler.PermissionStatus.granted;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get camera permission status
+  Future<permission_handler.PermissionStatus>
+  getCameraPermissionStatus() async {
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return permission_handler.PermissionStatus.granted;
+    }
+
+    try {
+      final permission = permission_handler.Permission.camera;
+      return await permission.status;
+    } catch (e) {
+      return permission_handler.PermissionStatus.denied;
+    }
+  }
+
+  /// Check if should show camera permission rationale
+  Future<bool> shouldShowCameraPermissionRationale() async {
+    if (!Platform.isAndroid) return false;
+
+    try {
+      final permission = permission_handler.Permission.camera;
+      return await permission.shouldShowRequestRationale;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Open app settings
   Future<bool> openAppSettings() async {
     try {

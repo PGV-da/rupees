@@ -114,7 +114,7 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
-                'Select a clear image of the currency note from your gallery to detect if it\'s real or fake. If fake currency is detected, you can report it to cyber crime authorities.',
+                'Select a clear image of the currency note from your gallery or take a photo with the camera to detect if it\'s real or fake. If fake currency is detected, you can report it to cyber crime authorities.',
                 style: TextStyle(fontSize: 14),
               ),
             ),
@@ -173,7 +173,7 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Gallery Access Required',
+                    'Gallery or Camera Access Required',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
@@ -216,6 +216,39 @@ class _CurrencyDetectionScreenState extends State<CurrencyDetectionScreen> {
             icon: const Icon(Icons.photo_library),
             label: const Text('Select from Gallery'),
             style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              elevation: 2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Camera button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: (_controller.isLoading || _controller.isAnalyzing)
+                ? null
+                : () async {
+                    try {
+                      // Check camera permission first
+                      final hasPermission =
+                          await PermissionDialog.handleCameraPermission(
+                            context,
+                          );
+                      if (hasPermission) {
+                        await _controller.pickImageFromCamera();
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ErrorHandler.showError(context, e.toString());
+                      }
+                    }
+                  },
+            icon: const Icon(Icons.camera_alt),
+            label: const Text('Take Photo'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.secondary,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               elevation: 2,
             ),

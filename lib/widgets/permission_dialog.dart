@@ -28,6 +28,33 @@ class PermissionDialog {
     return result ?? false;
   }
 
+  /// Show camera permission rationale dialog
+  static Future<bool> showCameraPermissionRationale(
+    BuildContext context,
+  ) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(AppConstants.cameraPermissionRequiredTitle),
+          content: const Text(AppConstants.cameraPermissionRationaleMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Allow'),
+            ),
+          ],
+        );
+      },
+    );
+    return result ?? false;
+  }
+
   /// Show permission denied dialog
   static Future<bool> showPermissionDeniedDialog(
     BuildContext context, {
@@ -52,6 +79,57 @@ class PermissionDialog {
                 const SizedBox(height: 16),
                 const Text(
                   AppConstants.enablePermissionInSettings,
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            if (isPermanentlyDenied)
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Open Settings'),
+              )
+            else
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Try Again'),
+              ),
+          ],
+        );
+      },
+    );
+    return result ?? false;
+  }
+
+  /// Show camera permission denied dialog
+  static Future<bool> showCameraPermissionDeniedDialog(
+    BuildContext context, {
+    bool isPermanentlyDenied = false,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(AppConstants.cameraPermissionDeniedTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isPermanentlyDenied
+                    ? AppConstants.cameraPermissionPermanentlyDeniedError
+                    : AppConstants.cameraPermissionDeniedError,
+              ),
+              if (isPermanentlyDenied) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  AppConstants.enableCameraPermissionInSettings,
                   style: TextStyle(fontSize: 12),
                 ),
               ],
@@ -116,6 +194,7 @@ class PermissionDialog {
       final tryAgain = await showPermissionDeniedDialog(context);
       if (tryAgain) {
         // Retry permission request
+        if (!context.mounted) return false;
         return await handleStoragePermission(context);
       }
       return false;
@@ -126,6 +205,62 @@ class PermissionDialog {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.message ?? 'Permission request failed'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+
+    return false;
+  }
+
+  /// Handle camera permission request with UI feedback
+  static Future<bool> handleCameraPermission(BuildContext context) async {
+    final permissionService = PermissionService();
+
+    // Check if we should show rationale first
+    if (await permissionService.shouldShowCameraPermissionRationale()) {
+      if (!context.mounted) return false;
+      final shouldRequest = await showCameraPermissionRationale(context);
+      if (!shouldRequest) return false;
+    }
+
+    // Request permission
+    final result = await permissionService.requestCameraPermission();
+
+    if (result.isGranted) {
+      return true;
+    }
+
+    // Handle denied permission
+    if (result.isPermanentlyDenied) {
+      if (!context.mounted) return false;
+      final openSettings = await showCameraPermissionDeniedDialog(
+        context,
+        isPermanentlyDenied: true,
+      );
+
+      if (openSettings) {
+        await permissionService.openAppSettings();
+      }
+      return false;
+    }
+
+    if (result.isDenied) {
+      if (!context.mounted) return false;
+      final tryAgain = await showCameraPermissionDeniedDialog(context);
+      if (tryAgain) {
+        // Retry permission request
+        if (!context.mounted) return false;
+        return await handleCameraPermission(context);
+      }
+      return false;
+    }
+
+    // Show error for other cases
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message ?? 'Camera permission request failed'),
           backgroundColor: Colors.red,
         ),
       );
